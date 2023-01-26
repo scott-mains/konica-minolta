@@ -1,8 +1,20 @@
-class NodeError(Exception):
+class Error(Exception):
     pass
 
-class InvalidStartNode(NodeError):
+class InternalError(Error):
     pass
 
-class InvalidEndNode(NodeError):
+class PlayerError(Error):
+    pass
+
+
+class InvalidStartNode(PlayerError):
+    pass
+
+
+class InvalidEndNode(PlayerError):
+    pass
+
+
+class PathDiscontinuity(InternalError):
     pass
