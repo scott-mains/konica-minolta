@@ -1,8 +1,10 @@
 class Error(Exception):
     pass
 
+
 class InternalError(Error):
     pass
+
 
 class PlayerError(Error):
     pass
@@ -17,4 +19,8 @@ class InvalidEndNode(PlayerError):
 
 
 class PathDiscontinuity(InternalError):
+    pass
+
+
+class UnknownState(InternalError):
     pass

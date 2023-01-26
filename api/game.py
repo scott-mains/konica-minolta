@@ -1,5 +1,5 @@
-from api.errors import InvalidStartNode, InvalidEndNode
-from api.models import Point, Line, Path
+from api.errors import InvalidStartNode, InvalidEndNode, UnknownState
+from api.models import Grid, Line, Path, Point
 
 
 class Game:
@@ -35,36 +35,37 @@ class Game:
         resets the game
         """
         self._state = 'INITIALIZE'
-        self.grid = {Point(x=i, y=j) for i in range(grid_size) for j in range(grid_size)}
+        self.grid = Grid(grid_size)
         # creates a set of x,y Points in a 4 x 4 grid
         # adapted from Paddy3118 in https://stackoverflow.com/questions/5450067/python-2d-array-access-with-points-x-y
         self._start_node = None
         self._end_node = None
+        self._new_line = None
         self.path = Path()
         self.player = 1
         self.error = None
 
     def __call__(self, point: Point):
 
-        # try:
-        if self.start_node is None:
-            try:
-                self.start_node = point
-                self.state = 'VALID_START_NODE'
-            except InvalidStartNode:
-                self.state = 'INVALID_START_NODE'
-        else:
-            try:
-                self.end_node = point
-                self.path.extend(self.new_line)
-                self.state = 'VALID_END_NODE' if not self.game_over else 'GAME_OVER'
-                self.next_player()
-            except InvalidEndNode:
-                self.state = 'INVALID_END_NODE'
+        try:
+            if self.start_node is None:
+                try:
+                    self.start_node = point
+                    self.state = 'VALID_START_NODE'
+                except InvalidStartNode:
+                    self.state = 'INVALID_START_NODE'
+            else:
+                try:
+                    self.end_node = point
+                    self.path += self.new_line
+                    self.state = 'VALID_END_NODE' if not self.game_over else 'GAME_OVER'
+                    self.next_player()
+                except InvalidEndNode:
+                    self.state = 'INVALID_END_NODE'
 
-        # except Exception as e:
-        #     self.error = str(e)
-        #     self.state = 'ERROR'
+        except Exception as e:
+            self.error = str(e)
+            self.state = 'ERROR'
 
     @property
     def state(self):
@@ -75,7 +76,7 @@ class Game:
         if state in self.STATES:
             self._state = state
         else:
-            raise IOError
+            raise UnknownState
 
     @property
     def start_node(self):
@@ -85,7 +86,7 @@ class Game:
     def start_node(self, node: Point):
         # on the first turn all nodes are valid start nodes.
         # once the first path segment has been defined, subsequent segments must start on either end of the path
-        choices = self.grid if self.state == 'INITIALIZE' else self.path.ends
+        choices = self.grid.nodes if self.state == 'INITIALIZE' else self.path.extrema
         if node in choices or node is None:
             self._start_node = node
         else:
@@ -105,10 +106,7 @@ class Game:
 
     def valid_end_nodes(self, point: Point):
         """
-        :return: set of Points that are
-            a) neighbors (adjacent or diagonal) to the given point and are on the grid
-            b) not on the connected path
-            c) not crossing the path
+        :return: set of Points that would define Line that is octilinear to and does not intersect the current path
 
         This method is called by:
          a) the end_node setter to determine if the selected point is a valid end node
@@ -135,9 +133,7 @@ class Game:
     def next_player(self):
         if self.new_line is not None:  # a line has been completed. it is now the other player's turn
             self.player = 2 if self.player == 1 else 1
-            # todo: player is not switching
-            self.start_node = self.end_node = None  # reset start and end nodes
-            # todo: new_line is None
+
     @property
     def game_over(self):
         """
@@ -145,5 +141,5 @@ class Game:
         :return: bool
         """
         return True \
-            if self.path and not self.valid_end_nodes(self.path.start) and not self.valid_end_nodes(self.path.end) \
+            if self.path and not self.valid_end_nodes(self.path.start_node) and not self.valid_end_nodes(self.path.end_node) \
             else False
