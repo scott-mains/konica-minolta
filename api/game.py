@@ -36,8 +36,6 @@ class Game:
         """
         self._state = 'INITIALIZE'
         self.grid = Grid(grid_size)
-        # creates a set of x,y Points in a 4 x 4 grid
-        # adapted from Paddy3118 in https://stackoverflow.com/questions/5450067/python-2d-array-access-with-points-x-y
         self._start_node = None
         self._end_node = None
         self._new_line = None
@@ -112,14 +110,13 @@ class Game:
          a) the end_node setter to determine if the selected point is a valid end node
          b) the game_over property to determine if the game is over, i.e. neither the start nor the end of the path has
             any valid end nodes.
-
         """
         if point is None:
             return {}  # there are no valid end nodes, e.g. # it is the first turn
 
-        nodes = self.grid.intersection(point.neighbors)  # remove start_node neighbors that are off the grid
+        nodes = self.start_node.neighbors(self.grid.size)  # remove start_node neighbors that are off the grid
         nodes -= set(self.path.nodes)  # remove nodes that are already on the connected path
-        nodes -= {node for node in nodes if self.path.crosses(Line(end=node, start=point))}  # nodes crossing the path
+        nodes -= {node for node in nodes if self.path.intersects(Line(end=node, start=point))}  # nodes crossing the path
         return nodes
 
     @property

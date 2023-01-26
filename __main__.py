@@ -14,7 +14,6 @@ app = FastAPI()
 # see https://fastapi.tiangolo.com/tutorial/cors/
 app.add_middleware(CORSMiddleware, allow_origins=['*'], allow_methods=['*'], expose_headers=['*'])
 
-global game
 game = Game()
 
 

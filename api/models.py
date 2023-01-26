@@ -13,13 +13,12 @@ class Point:
     def __str__(self):
         return f'({self.x}, {self.y})'
 
-    @property
-    def neighbors(self, radius: int = 1, direction: tuple[int] = None) -> set:
+    def neighbors(self, radius: int = 1, direction: int = None) -> set:
         """
         a set of neighboring points
 
         :param radius: limits the nodes by integer distance (x-x0, or y-y0) Default distance 1 node away
-        :param direction: (optional) limits the nodes to those found between the specified direction(s)
+        :param direction: (optional) limits the nodes to those found in the specified direction
         :return:
         """
         neighbors = set()
@@ -39,10 +38,11 @@ class Grid:
     """
     A Cartesian Grid starting at a specified point
     """
-    def __init__(self, radius, origin: Point = Point(x=0, y=0)):
-        self.radius = radius
-        self.nodes = origin + origin.neighbors(radius=4, direction=(0, 90))
-
+    def __init__(self, size):
+        self.size = size
+        self.nodes = {Point(x=i, y=j) for i in range(size) for j in range(size)}
+        # creates a set of x,y Points in a 4 x 4 grid
+        # adapted from Paddy3118 in https://stackoverflow.com/questions/5450067/python-2d-array-access-with-points-x-y
 
 
 class Path:
@@ -115,6 +115,24 @@ class Path:
                 continue
             yield Line(start=self.nodes[i-1], end=self.nodes[i])
 
+    def intersects(self, other):
+        """
+        determines whether this line (i.e. any of its segments or nodes) intersects the other line's segments or nodes
+        :param other: the other line
+        :return: Bool
+
+        A line intersects another either at a node, or by crossing segments between nodes:
+        1. Intersection at a node occurs where any node of this line is coincident with any node of the other line.
+        2. Intersection by crossing occurs where segments starts at the same vertical and the start of the first and the
+        end of the second are on the same horizontal and vice versa
+        """
+        def crosses(a: Line, b: Line) -> bool:
+            return a.start_node.y == b.start_node.y and a.end_node.x == b.start_node.x and b.end_node.x == a.start_node.x \
+                or a.start_node.x == b.start_node.x and a.end_node.y == b.end_node.y and b.end_node.y == a.start_node.y
+
+        return bool(set(self.nodes).intersection(set(other.nodes))) \
+            or any((crosses(a, b) for a in self.segments for b in other.segments))
+
 
 class Line(Path, BaseModel):
     """
@@ -132,6 +150,7 @@ class Line(Path, BaseModel):
     def __str__(self):
         return f'[{self.start}, {self.end}]'
 
+    @property
     def direction(self):
         """
         :return: the direction in degrees
@@ -142,22 +161,4 @@ class Line(Path, BaseModel):
     @property
     def is_octilinear(self):
         return not self.direction % 45
-
-    def intersects(self, other):
-        """
-        determines whether this line (i.e. any of its segments or nodes) intersects the other line's segments or nodes
-        :param other: the other line
-        :return: Bool
-
-        A line intersects another either at a node, or by crossing segments between nodes:
-        1. Intersection at a node occurs where any node of this line is coincident with any node of the other line.
-        2. Intersection by crossing occurs where segments starts at the same vertical and the start of the first and the
-        end of the second are on the same horizontal and vice versa
-        """
-        def crosses(a, b):
-            return a.start_node.y == b.start_node.y and a.end_node.x == b.start_node.x and b.end_node.x == a.start_node.x \
-                or a.start_node.x == b.start_node.x and a.end_node.y == b.end_node.y and b.end_node.y == a.start_node.y
-
-        return bool(set(self.nodes).intersection(set(other.nodes))) \
-            or any((crosses() for a in self.segments for b in other.segments))
 
