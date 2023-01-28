@@ -36,7 +36,7 @@ class Error(BaseModel):
 
 
 def respond() -> Payload:
-    return {
+    response = {
         'INITIALIZE': Payload(
             msg='INITIALIZE',
             body=StateUpdate(
@@ -66,7 +66,7 @@ def respond() -> Payload:
             msg='GAME_OVER',
             body=StateUpdate(
                 heading='Game Over',
-                message=f'Player {game.player} wins!',
+                message=f'Player {game.winner} wins!',
                 newLine=game.new_line,
             )
         ),
@@ -104,6 +104,9 @@ def respond() -> Payload:
         ),
     }[game.state]
 
+    print(response)
+    return response
+
 
 @app.get('/initialize', response_model=Payload)
 def initialize():
@@ -121,7 +124,6 @@ def on_click(point: Point):
 
 @app.post('/error', response_model=Payload)
 def on_error(error: Error):
-    print(error)
     game.error = str(error)
     game.state = 'ERROR'
     return respond()  # this response will be ignored by the client, but it must be sent

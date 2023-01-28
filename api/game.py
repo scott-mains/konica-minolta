@@ -102,7 +102,7 @@ class Game:
         else:
             raise InvalidEndNode
 
-    def valid_end_nodes(self, point: Point):
+    def valid_end_nodes(self, start_node: Point):
         """
         :return: set of Points that would define Line that is octilinear to and does not intersect the current path
 
@@ -111,13 +111,13 @@ class Game:
          b) the game_over property to determine if the game is over, i.e. neither the start nor the end of the path has
             any valid end nodes.
         """
-        if point is None:
-            return {}  # there are no valid end nodes, e.g. # it is the first turn
+        # if not isinstance(start_node, Point):
+        #     raise TypeError(f'Start node is type: {type(start_node)}.  Expected a Point')
 
-        nodes = self.start_node.neighbors(self.grid.size)  # remove start_node neighbors that are off the grid
-        nodes -= set(self.path.nodes)  # remove nodes that are already on the connected path
-        nodes -= {node for node in nodes if self.path.intersects(Line(end=node, start=point))}  # nodes crossing the path
-        return nodes
+        return {
+            node for node in self.grid.nodes_octilinear_to(start_node)
+            if not self.path.intersects(Line(end=node, start=start_node))
+        }
 
     @property
     def new_line(self):
@@ -140,3 +140,7 @@ class Game:
         return True \
             if self.path and not self.valid_end_nodes(self.path.start_node) and not self.valid_end_nodes(self.path.end_node) \
             else False
+
+    @property
+    def winner(self):
+        return self.player if self.game_over else None

@@ -1,8 +1,9 @@
 import math
-
-from pydantic import BaseModel, dataclasses
+from typing import Union
+from pydantic import BaseModel, dataclasses, Field
 
 from api.errors import PathDiscontinuity
+from api.utils import is_octilinear
 
 
 @dataclasses.dataclass(frozen=True)  # hashable (see @antonl in https://github.com/pydantic/pydantic/issues/1303)
@@ -13,46 +14,52 @@ class Point:
     def __str__(self):
         return f'({self.x}, {self.y})'
 
-    def neighbors(self, radius: int = 1, direction: int = None) -> set:
-        """
-        a set of neighboring points
-
-        :param radius: limits the nodes by integer distance (x-x0, or y-y0) Default distance 1 node away
-        :param direction: (optional) limits the nodes to those found in the specified direction
-        :return:
-        """
-        neighbors = set()
-
-        for i in range(-radius, radius + 1):  # e.g. [-3, -2, -1, 0, 1, 2, 3] to find all points 3 nodes away
-            for j in range(-radius, radius + 1):
-                neighbor = Point(x=self.x + i, y=self.y + j)
-                if Line(start_node=self, end_node=neighbor).direction in direction:
-                    neighbors.add(neighbor)
-
-        neighbors.discard(self)  # we remove this current point from the set of neighbors
-
-        return neighbors
+    def direction_to(self, other):
+        delta_x = other.x - self.x
+        delta_y = self.y - other.y  # we transpose this to account for the orientation of the grid
+        return int(round(math.atan2(delta_y, delta_x) * 180 / math.pi))
 
 
 class Grid:
     """
     A Cartesian Grid starting at a specified point
     """
-    def __init__(self, size):
+    def __init__(self, size=4):
         self.size = size
         self.nodes = {Point(x=i, y=j) for i in range(size) for j in range(size)}
         # creates a set of x,y Points in a 4 x 4 grid
         # adapted from Paddy3118 in https://stackoverflow.com/questions/5450067/python-2d-array-access-with-points-x-y
+
+    def nodes_octilinear_to(self, point: Point) -> set[Point, ...]:
+        '''
+        determines which nodes in the grid would form an octilinear line with the given point
+        :return nodes: the set of nodes
+        '''
+
+        nodes = set()  # container for the node
+
+        # we set a search radius up to the size of the grid in both directions
+        radius = range(-self.size, self.size + 1) # e.g. [-3, -2, -1, 0, 1, 2, 3]
+
+        for i in radius:
+            for j in radius:
+                node = Point(x=point.x + i, y=point.y + j)
+                if node != point and Line(start_node=point, end_node=node).is_octilinear:  # skip the point in question
+                    nodes.add(node)
+
+        return nodes.intersection(self.nodes)  # remove nodes beyond the Grid
 
 
 class Path:
     """
     A series of nodes defining connected line segments
     """
-    def __init__(self, *args, **kwargs):
+
+    def __init__(self, nodes: Union[list[Point, ...], None] = None, *args, **kwargs):
+
         # this is a mixin (see https://stackoverflow.com/questions/533631/what-is-a-mixin-and-why-is-it-useful)
         super().__init__(*args, **kwargs)
-        self._nodes = []  # we use a list to preserve order, elsewhere in the game logic we cast as a set
+        self.nodes = [] if nodes is None else nodes  # we use a list to preserve order
 
     def __bool__(self):
         """
@@ -61,7 +68,7 @@ class Path:
         return self.start_node is not None and self.end_node is not None
 
     def __str__(self):
-        return f'[{", ".join(self.nodes)}]'
+        return f'[{", ".join((str(node) for node in self.nodes))}]'
 
     def __add__(self, other):
         """
@@ -81,14 +88,21 @@ class Path:
             else None
 
         try:
-            self._nodes.insert(index, other.end_node)  # insert the node at the beginning or the end of the path
+            self.nodes.insert(index, other.end_node)  # insert the node at the beginning or the end of the path
         except TypeError:  # index is None because the line segment is discontinuous
             raise PathDiscontinuity(f'The path {other} is discontinuous with this path:\n{self}')
             # Note: If the start and end of the new line are properly validated, this should never occur in game play
 
     @property
-    def nodes(self):
+    def nodes(self) -> list[Point, ...]:
         return self._nodes
+
+    @nodes.setter
+    def nodes(self, nodes: list[Point, ...]):
+        if all((isinstance(node, Point) for node in nodes)):
+            self._nodes = nodes
+        else:
+            raise TypeError
 
     @property
     def start_node(self):
@@ -134,6 +148,7 @@ class Path:
             or any((crosses(a, b) for a in self.segments for b in other.segments))
 
 
+# @dataclasses.dataclass(frozen=True)
 class Line(Path, BaseModel):
     """
     A line segment defined by a series of two or more co-linear nodes of a cartesian grid
@@ -143,22 +158,27 @@ class Line(Path, BaseModel):
     start: Point
     end: Point
 
+    # we overload the __init__ to make use of pydantic BaseModel field validation while subclassing from the Path mixin
     def __init__(self, *args, **kwargs):
         # Path is a mixin (see Path.__init__) so we only need invoke super().__init__ once
         super().__init__(*args, **kwargs)
+        direction = start_node.direction_to(end_node)
 
-    def __str__(self):
-        return f'[{self.start}, {self.end}]'
+        x = range(self.start.x, self.end.x + 1)
+        y = range(self.start.y, self.end.y + 1)
+
+        nodes = [Point(x=start.x + i, y=start_node.y + j) for i in x for j in y]
+
+        self.nodes = nodes
 
     @property
-    def direction(self):
+    def direction(self) -> int:
         """
-        :return: the direction in degrees
-        Note: the difference along the vertical axis is transposed to account for the inversion in the game coordinates
+        :return int: the direction in degrees from the start node to the end node
         """
-        return int(math.atan((self.start.y - self.end.y)/(self.end.x - self.start.x)) * 180 / math.pi)
+        return self.start_node.direction_to(self.end_node)
 
     @property
     def is_octilinear(self):
-        return not self.direction % 45
+        return is_octilinear(self.direction)
 
