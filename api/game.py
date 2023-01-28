@@ -64,6 +64,7 @@ class Game:
         except Exception as e:
             self.error = str(e)
             self.state = 'ERROR'
+            raise e  # for debugging  todo: comment when done
 
     @property
     def state(self):
