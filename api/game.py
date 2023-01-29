@@ -131,6 +131,7 @@ class Game:
     def next_player(self):
         if self.new_line is not None:  # a line has been completed. it is now the other player's turn
             self.player = 2 if self.player == 1 else 1
+        self.end_node = self.start_node = None
 
     @property
     def game_over(self):
@@ -139,7 +140,7 @@ class Game:
         :return: bool
         """
         return True \
-            if self.path and not self.valid_end_nodes(self.path.start_node) and not self.valid_end_nodes(self.path.end_node) \
+            if self.path and not self.valid_end_nodes(self.path.start) and not self.valid_end_nodes(self.path.end) \
             else False
 
     @property
