@@ -18,12 +18,12 @@ class TestLine(unittest.TestCase):
 
         for i, (turn, nodes) in enumerate(zip(TURNS, NEW_LINE_NODES)):
             line = Line(start=turn[0], end=turn[1])
+            print('turn:', i + 1, '(expected, actual)')
+            for pair in zip(list(nodes), line.nodes):
+                print(pair)
             self.assertListEqual(line.nodes, list(nodes))
             self.assertEqual(line.start, turn[0])
             self.assertEqual(line.end, turn[1])
-
-    def test__direction(self):
-        pass
 
 
 if __name__ == '__main__':

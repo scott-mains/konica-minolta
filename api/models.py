@@ -1,10 +1,11 @@
 import math
 from typing import Union
+from dataclasses import dataclass
 
-from pydantic.dataclasses import dataclass
+# from pydantic.dataclasses import dataclass
 
-from api.errors import PathDiscontinuity
-from api.utils import is_octilinear
+from api.errors import PathDiscontinuity, InvalidLine
+from api.utils import is_octilinear, is_horizontal, is_diagonal, is_vertical
 
 
 @dataclass(frozen=True)  # hashable (see @antonl in https://github.com/pydantic/pydantic/issues/1303)
@@ -17,7 +18,7 @@ class Point:
 
     def direction_to(self, other):
         delta_x = other.x - self.x
-        delta_y = self.y - other.y  # we transpose this to account for the orientation of the grid
+        delta_y = other.y - self.y
         return int(round(math.atan2(delta_y, delta_x) * 180 / math.pi))
 
 
@@ -40,12 +41,12 @@ class Grid:
         nodes = set()  # container for the node
 
         # we set a search radius up to the size of the grid in both directions
-        radius = range(-self.size, self.size + 1) # e.g. [-3, -2, -1, 0, 1, 2, 3]
+        radius = range(-self.size, self.size + 1)  # e.g. [-3, -2, -1, 0, 1, 2, 3]
 
         for i in radius:
             for j in radius:
                 node = Point(x=point.x + i, y=point.y + j)
-                if node != point and Line(start=point, end=node).is_octilinear:  # skip the point in question
+                if node != point and is_octilinear(point.direction_to(node)):  # skip the original point
                     nodes.add(node)
 
         return nodes.intersection(self.nodes)  # remove nodes beyond the Grid
@@ -54,22 +55,23 @@ class Grid:
 class Path:
     """
     A series of nodes defining connected line segments
+    t
+    this is also considered a "directed graph" (see https://www.redblobgames.com/pathfinding/grids/graphs.html)
     """
 
     def __init__(self, nodes: Union[list[Point, ...], None] = None, *args, **kwargs):
         self.nodes = [] if nodes is None else nodes  # we use a list to preserve order
-        super().__init__(*args, **kwargs)
 
     def __bool__(self):
         """
         :return: True if the path has both start and end nodes
         """
-        return self.start is not None and self.end is not None
+        return bool(self.nodes)
 
     def __str__(self):
         return f'[{", ".join((str(node) for node in self.nodes))}]'
 
-    def __add__(self, other):
+    def extend(self, other):
         """
         extends this path by joining it with another
 
@@ -82,13 +84,12 @@ class Path:
 
         :param other: the path to be joined to the path (in Game play this will be a Line)
         """
-        index = 0 if other.start == self.start or self.start is None \
-            else -1 if other.start == self.end or self.end is None \
-            else None
-
-        try:
-            self.nodes.insert(index, other.end)  # insert the node at the beginning or the end of the path
-        except TypeError:  # index is None because the line segment is discontinuous
+        if not self.nodes or other._start == self._end:  # the other path starts where this path ends or this path is empty
+            self.nodes.extend(other.nodes)
+        elif other._start == self._start:
+            for node in other.nodes.reverse():
+                self.nodes.insert(0, node)  # insert the nodes at the start in reverse order
+        else:
             raise PathDiscontinuity(f'The path {other} is discontinuous with this path:\n{self}')
             # Note: If the start and end of the new line are properly validated, this should never occur in game play
 
@@ -104,22 +105,31 @@ class Path:
             raise TypeError
 
     @property
-    def start(self):
+    def _start(self):
+        """
+        todo: there is some redundancy here due to pydantic field name collision so we make this protected and read only
+        """
         try:
             return self.nodes[0]
         except IndexError:
-            return None
+            raise AttributeError
 
     @property
-    def end(self):
+    def _end(self):
         try:
             return self.nodes[-1]
         except IndexError:
-            return None
+            raise AttributeError
 
     @property
     def extrema(self):
-        return self.start, self.end
+        """
+        this property is used in Game play to deternine whether a start node is valid,
+        i.e. it is one of the path ends
+
+        :return:
+        """
+        return self._nodes[0], self._nodes[-1]
 
     @property
     def segments(self):
@@ -140,8 +150,11 @@ class Path:
         end of the second are on the same horizontal and vice versa
         """
         def crosses(a: Line, b: Line) -> bool:
-            return a.start.y == b.start.y and a.end.x == b.start.x and b.end.x == a.start.x \
-                or a.start.x == b.start.x and a.end.y == b.end.y and b.end.y == a.start.y
+            if a and b:
+                return a.start.y == b.start.y and a.end.x == b.start.x and b.end.x == a.start.x \
+                    or a.start.x == b.start.x and a.end.y == b.end.y and b.end.y == a.start.y
+            else:
+                return False
 
         return bool(set(self.nodes).intersection(set(other.nodes))) \
             or any((crosses(a, b) for a in self.segments for b in other.segments))
@@ -150,15 +163,58 @@ class Path:
 @dataclass
 class Line(Path):
     """
-    A line segment defined by a series of two or more co-linear nodes of a cartesian grid
+    A special case of a Path
+    An octilinear line segment defined by a series of two or more co-linear nodes of a cartesian grid
     oriented either cardinally (0, 90, 180, 270) or ordinally (45, 135, 225, 315)
-    A line segment is also a Path
     """
-    def __init__(self, start: Point, end: Point, *args, **kwargs):
-        x = range(start.x, end.x + 1)
-        y = range(start.y, end.y + 1)
-        nodes = [Point(x=start.x + i, y=start.y + j) for i in x for j in y]
-        super().__init__(nodes, *args, **kwargs)
+    start: Point
+    end: Point
+
+    def __init__(self, *args, **kwargs):
+        start, end = kwargs.get('start'), kwargs.get('end')
+
+        if start is None or end is None:  # we have to allow None to comply with pydantic field validation
+            raise InvalidLine(start, end)  # but the line is invalid
+
+        if not is_octilinear(start.direction_to(end)):
+            raise InvalidLine(start, end)  # the line is not allowed in this game because it is not octilinear
+
+        # Since a Line is a special octilinear case of a path, we fill in the nodes between the start and end,
+        # starting with the start node, we add nodes increasing x and y by a delta we increment until we reach the end.
+
+        delta_x = end.x - start.x
+        delta_y = end.y - start.y
+
+        if delta_x == 0 and delta_y == 0:
+            raise InvalidLine(start, end)
+
+        if delta_x > 0:
+            deltas_x = list(range(0, delta_x + 1))
+
+        if delta_y > 0:
+            deltas_y = list(range(0, delta_y + 1))
+
+        if delta_x < 0:
+            deltas_x = list(range(delta_x, 1))
+            deltas_x.reverse()  # we reverse the deltas to match the sense
+
+        if delta_y < 0:
+            deltas_y = list(range(delta_y, 1))
+            deltas_y.reverse()
+
+        if delta_y == 0:
+            deltas_y = [0] * len(deltas_x)
+
+        if delta_x == 0:
+            deltas_x = [0] * len(deltas_y)
+
+        nodes = [
+            Point(x=start.x + delta_x, y=start.y + delta_y)
+            for delta_x, delta_y in zip(deltas_x, deltas_y)
+        ]
+
+        super().__init__(nodes)
+
 
     @property
     def direction(self) -> int:
@@ -166,8 +222,3 @@ class Line(Path):
         :return int: the direction in degrees from the start node to the end node
         """
         return self.start.direction_to(self.end)
-
-    @property
-    def is_octilinear(self):
-        return is_octilinear(self.direction)
-

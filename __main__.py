@@ -88,7 +88,7 @@ def respond() -> Payload:
                 heading=f'Player {game.player}',
                 message='''
                 Invalid end position.
-                You must choose a neighboring node that does not intersect the path.
+                You must choose a node in an octilinear direction that does not intersect the path.
                 Try again.
                 ''',
                 newline=None,

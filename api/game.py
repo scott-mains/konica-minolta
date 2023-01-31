@@ -1,10 +1,13 @@
-from api.errors import InvalidStartNode, InvalidEndNode, UnknownState
+from api.errors import InvalidStartNode, InvalidEndNode, UnknownState, InvalidLine
 from api.models import Grid, Line, Path, Point
 
 
 class Game:
 
     """
+    Hold that Line
+    by Sid Sackson
+
     Game Logic
 
     1. Player selects a start node.
@@ -16,7 +19,9 @@ class Game:
         This node must be:
         a) adjacent or diagonal to the start node
         b) not one of the previously connected nodes on the path
-        If there are no remaining valid nodes to select the game is over and the current player wins.
+
+    Game is Over when there are no remaining valid nodes to select.
+    The Player who played the last valid line wins.
 
     """
 
@@ -55,16 +60,17 @@ class Game:
             else:
                 try:
                     self.end_node = point
-                    self.path += self.new_line
+                    self.path.extend(self.new_line)
                     self.state = 'VALID_END_NODE' if not self.game_over else 'GAME_OVER'
                     self.next_player()
                 except InvalidEndNode:
+                    self.start_node = None  # start the turn over
                     self.state = 'INVALID_END_NODE'
 
         except Exception as e:
             self.error = str(e)
             self.state = 'ERROR'
-            raise e  # for debugging  todo: comment when done
+            # raise e  # for debugging
 
     @property
     def state(self):
@@ -114,11 +120,17 @@ class Game:
         """
         # if not isinstance(start_node, Point):
         #     raise TypeError(f'Start node is type: {type(start_node)}.  Expected a Point')
+        nodes = set()
+        for node in self.grid.nodes:
+            try:
+                line = Line(start=start_node, end=node)
+            except InvalidLine:
+                continue
 
-        return {
-            node for node in self.grid.nodes_octilinear_to(start_node)
-            if not self.path.intersects(Line(end=node, start=start_node))
-        }
+            if not self.path.intersects(line):
+                nodes.add(node)
+
+        return nodes
 
     @property
     def new_line(self):
@@ -140,7 +152,7 @@ class Game:
         :return: bool
         """
         return True \
-            if self.path and not self.valid_end_nodes(self.path.start) and not self.valid_end_nodes(self.path.end) \
+            if self.path and not self.valid_end_nodes(self.path._start) and not self.valid_end_nodes(self.path._end) \
             else False
 
     @property
