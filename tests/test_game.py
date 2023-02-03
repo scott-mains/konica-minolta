@@ -21,24 +21,28 @@ class TestGame(unittest.TestCase):
 
     def test__set_start_node(self):
 
-        print('(expected, actual)')
-        for node in Game().grid.nodes:  # test all the nodes
-            for i in range(len(TURNS) + 1):  # through all the turns in the sample game  todo: use a fixture
+        for i in range(len(TURNS)):  # test all the turns in the sample game  todo: use a fixture
+            print(f'\nTurn {i + 1}:\n')  # test turn
+            valid_start_nodes = VALID_START_NODES[i]  # fixture of known valid start nodes for this turn
+            print('Valid start nodes:', valid_start_nodes)
+            for node in Game().grid.nodes:  # test all the nodes
+                print('\nnode:', node, '\n')  # present test node
                 game = Game()  # Initialize the game
                 for turn in TURNS[:i]:
-                    play_turn(game, turn)  # play the game until the turn in question
-                game(node)  # receive the next node
+                    play_turn(game, turn)  # play the game up until the turn in question
+                game(node)  # play the test node as the start node of the turn in question
 
-                print('Turn:', i + 1)
-                print('node:', node, game.start_node)
-                print('state:', 'VALID_START_NODE' if node in VALID_START_NODES[i] else 'INVALID_START_NODE', game.state)
-
-                # if node in VALID_START_NODES[i]:  # known valid start nodes
-                #     self.assertEqual(node, game.start_node)  # the start node is set
-                #     self.assertEqual(game.state, 'VALID_START_NODE')  # the state is correct
-                # else:
-                #     self.assertIsNone(game.start_node)  # the node is not set
-                #     self.assertEqual(game.state, 'INVALID_START_NODE') # the state is correct
+                # evaluate
+                if node in valid_start_nodes:
+                    print(f'state: {game.state} expected: VALID_START_NODE')
+                    print(f'start_node: {game.start_node} expected: {node}')
+                    self.assertEqual(node, game.start_node)  # the start node is set
+                    self.assertEqual(game.state, 'VALID_START_NODE')  # the state is correct
+                else:
+                    print(f'state: {game.state} expected: INVALID_START_NODE')
+                    print(f'start_node: {game.start_node} expected: None')
+                    self.assertIsNone(game.start_node)  # the node is not set
+                    self.assertEqual(game.state, 'INVALID_START_NODE')  # the state is correct
 
     def test__set_end_node(self):
 
@@ -83,13 +87,18 @@ class TestGame(unittest.TestCase):
             self.assertIsNotNone(self.path)
 
     def test__game_over(self):
-
         game = Game()
         for i, turn in enumerate(TURNS):
+            print(f'\nTurn {i+1}')
             play_turn(game, turn)
             if i < len(TURNS) - 1:
+                print(f'game_over: {game.game_over} Expected: False')
+                print(f'winner: {game.winner} Expected: None')
                 self.assertFalse(game.game_over)
+                self.assertIsNone(game.winner)
 
+        print(f'game_over: {game.game_over} Expected: True')
+        print(f'winner: {game.winner} Expected: 2')
         self.assertTrue(game.game_over)
         self.assertEqual(game.winner, 2)
 

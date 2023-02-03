@@ -43,7 +43,7 @@ class Game:
         self.grid = Grid(grid_size)
         self._start_node = None
         self._end_node = None
-        self._new_line = None
+        self.new_line = None
         self.path = Path()
         self.player = 1
         self.error = None
@@ -57,16 +57,17 @@ class Game:
                     self.state = 'VALID_START_NODE'
                 except InvalidStartNode:
                     self.state = 'INVALID_START_NODE'
+                    self.try_again()
             else:
                 try:
                     self.end_node = point
+                    self.new_line = Line(start=self.start_node, end=self.end_node)
                     self.path.extend(self.new_line)
                     self.state = 'VALID_END_NODE' if not self.game_over else 'GAME_OVER'
                     self.next_player()
                 except InvalidEndNode:
-                    self.start_node = None  # start the turn over
                     self.state = 'INVALID_END_NODE'
-
+                    self.try_again()
         except Exception as e:
             self.error = str(e)
             self.state = 'ERROR'
@@ -132,18 +133,21 @@ class Game:
 
         return nodes
 
-    @property
-    def new_line(self):
+    # @property
+    # def new_line(self):
+    #
+    #     if self.start_node is not None and self.end_node is not None:
+    #         return Line(start=self.start_node, end=self.end_node)
+    #     else:
+    #         return None
 
-        if self.start_node is not None and self.end_node is not None:
-            return Line(start=self.start_node, end=self.end_node)
-        else:
-            return None
+    def try_again(self):
+        self.new_line = self.end_node = self.start_node = None
 
     def next_player(self):
         if self.new_line is not None:  # a line has been completed. it is now the other player's turn
             self.player = 2 if self.player == 1 else 1
-        self.end_node = self.start_node = None
+            self.end_node = self.start_node = None
 
     @property
     def game_over(self):

@@ -1,10 +1,10 @@
 import math
+from copy import copy
 from typing import Union
-from dataclasses import dataclass
 
-# from pydantic.dataclasses import dataclass
+from pydantic.dataclasses import dataclass
 
-from api.errors import PathDiscontinuity, InvalidLine
+from api.errors import PathDiscontinuity, InvalidLine, InvalidPath
 from api.utils import is_octilinear, is_horizontal, is_diagonal, is_vertical
 
 
@@ -55,12 +55,11 @@ class Grid:
 class Path:
     """
     A series of nodes defining connected line segments
-    t
     this is also considered a "directed graph" (see https://www.redblobgames.com/pathfinding/grids/graphs.html)
     """
 
     def __init__(self, nodes: Union[list[Point, ...], None] = None, *args, **kwargs):
-        self.nodes = [] if nodes is None else nodes  # we use a list to preserve order
+        self.nodes = nodes
 
     def __bool__(self):
         """
@@ -84,11 +83,23 @@ class Path:
 
         :param other: the path to be joined to the path (in Game play this will be a Line)
         """
-        if not self.nodes or other._start == self._end:  # the other path starts where this path ends or this path is empty
-            self.nodes.extend(other.nodes)
+        self_nodes = list(self.nodes)
+        other_nodes = list(other.nodes)  # we recast to new list to avoid mutating the other path, also force to list
+
+        if not self:  # this path has no nodes yet
+            self.nodes = other_nodes  # we just use the other's nodes
+
+        elif other._start == self._end:
+            self_nodes.pop()  # remove the end
+            self_nodes.extend(other_nodes)
+            self.nodes = self_nodes
+
         elif other._start == self._start:
-            for node in other.nodes.reverse():
-                self.nodes.insert(0, node)  # insert the nodes at the start in reverse order
+            other_nodes.reverse()
+            other_nodes.pop()
+            other_nodes.extend(self_nodes)
+            self.nodes = other_nodes
+
         else:
             raise PathDiscontinuity(f'The path {other} is discontinuous with this path:\n{self}')
             # Note: If the start and end of the new line are properly validated, this should never occur in game play
@@ -99,8 +110,10 @@ class Path:
 
     @nodes.setter
     def nodes(self, nodes: list[Point, ...]):
-        if all((isinstance(node, Point) for node in nodes)):
-            self._nodes = nodes
+        if nodes is None:
+            self._nodes = []
+        elif all((isinstance(node, Point) for node in nodes)):
+            self._nodes = list(nodes)  # recast as list to avoid mutating source in later operations
         else:
             raise TypeError
 
@@ -124,12 +137,12 @@ class Path:
     @property
     def extrema(self):
         """
-        this property is used in Game play to deternine whether a start node is valid,
+        this property is used in Game play to determine whether a start node is valid,
         i.e. it is one of the path ends
 
         :return:
         """
-        return self._nodes[0], self._nodes[-1]
+        return self._start, self._end
 
     @property
     def segments(self):
@@ -156,8 +169,8 @@ class Path:
             else:
                 return False
 
-        return bool(set(self.nodes).intersection(set(other.nodes))) \
-            or any((crosses(a, b) for a in self.segments for b in other.segments))
+        return bool(set(self.nodes).intersection(set(other.nodes[1:]))) \
+            or any((crosses(a, b) for a in self.segments for b in other.segments))  # nodes[1:] ignores the start node
 
 
 @dataclass
@@ -214,7 +227,13 @@ class Line(Path):
         ]
 
         super().__init__(nodes)
-
+        try:
+            self.start = copy(self.extrema[0])
+            self.end = copy(self.extrema[1])
+        except AttributeError:
+            self.start = None
+            self.end = None
+            raise InvalidLine(self.start, self.end)
 
     @property
     def direction(self) -> int:

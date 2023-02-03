@@ -33,5 +33,9 @@ class PathDiscontinuity(InternalError):
     pass
 
 
+class InvalidPath(InternalError):
+    pass
+
+
 class UnknownState(InternalError):
     pass

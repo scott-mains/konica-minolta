@@ -22,8 +22,8 @@ class TestLine(unittest.TestCase):
             for pair in zip(list(nodes), line.nodes):
                 print(pair)
             self.assertListEqual(line.nodes, list(nodes))
-            self.assertEqual(line.start, turn[0])
-            self.assertEqual(line.end, turn[1])
+            self.assertEqual(line._start, turn[0])
+            self.assertEqual(line._end, turn[1])
 
 
 if __name__ == '__main__':
