@@ -80,11 +80,12 @@ class TestGame(unittest.TestCase):
 
         game = Game()
         for i, turn in enumerate(TURNS):
+            print(f'\nTurn {i + 1}')
             play_turn(game, turn)
-            self.assertEqual(game.player, 2 if i % 2 else 1)  # 0 index so player 1 is even
+            self.assertEqual(game.player, 2 if i % 2 == 0 else 1)  # 0 index so player 1 is even
             self.assertIsNone(game.start_node)
             self.assertIsNone(game.end_node)
-            self.assertIsNotNone(self.path)
+            self.assertIsNotNone(game.path)
 
     def test__game_over(self):
         game = Game()

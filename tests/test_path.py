@@ -9,7 +9,7 @@ class TestPath(unittest.TestCase):
     def test___init__(self):
         for nodes in NEW_LINE_NODES:
             path = Path(nodes)
-            self.assertListEqual(path.nodes, nodes)
+            self.assertListEqual(path.nodes, list(nodes))
 
     def test__extend(self):
 
