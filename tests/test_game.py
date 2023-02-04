@@ -67,8 +67,11 @@ class TestGame(unittest.TestCase):
         # verify all the new lines of the sample game are represented properly
         game = Game()
         for i, turn in enumerate(TURNS):
+            print(f'\nTurn: {i+1}')
             play_turn(game, turn)
-            self.assertEqual(game.new_line, Line(start=turn[0], end=turn[1]))
+            new_line = Line(start=turn[0], end=turn[1])
+            print(f'new_line: {game.new_line} expected: {new_line}')
+            self.assertEqual(game.new_line, new_line)
 
         game = Game()
         play_turn(TURNS[0])

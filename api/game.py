@@ -132,15 +132,7 @@ class Game:
                 nodes.add(node)
 
         return nodes
-
-    # @property
-    # def new_line(self):
-    #
-    #     if self.start_node is not None and self.end_node is not None:
-    #         return Line(start=self.start_node, end=self.end_node)
-    #     else:
-    #         return None
-
+    
     def try_again(self):
         self.new_line = self.end_node = self.start_node = None
 

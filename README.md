@@ -6,8 +6,8 @@ Implemented in response to:
 [Konica Minolta Business Solutions Technical Assessment](https://technical-assessment.konicaminoltamarketplace.com/)
 
 ## Framework
-The API is implemented for Python 3.11 using [FastAPI](https://fastapi.tiangolo.com/) with [Pydantic](https://docs.pydantic.dev/) dataclasses
-see `requirements/requirements.txt` for details
+The API is implemented for Python 3.11 using [FastAPI](https://fastapi.tiangolo.com/) with 
+[Pydantic](https://docs.pydantic.dev/) dataclasses (see `requirements/requirements.txt` for details).
 
 ## Installing
 To install the API server use Pip in a Python 3.11 environment:
@@ -20,10 +20,10 @@ pip install -r requirements/requirements.txt
 To run the API, use the convenience script:
 
 ```shell
-./scripts/up
+./scripts/run
 ```
 
-this start the api serve on the local host.
+This starts the api server on the local host.
 
 ## Client
 A copy of the client has been included in this repo configured for the HTTP api type as follows:
