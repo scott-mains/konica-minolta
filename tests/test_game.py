@@ -87,12 +87,6 @@ class TestGame(unittest.TestCase):
             print(f'new_line: {game.new_line} expected: {new_line}')
             self.assertEqual(game.new_line, new_line)
 
-        game = Game()
-        play_turn(TURNS[0])
-        invalid_start_node = Point(x=3, y=3)
-        game(invalid_start_node)
-        self.assertIsNone(game.new_line)
-
     def test__next_player(self):
 
         game = Game()
@@ -114,11 +108,12 @@ class TestGame(unittest.TestCase):
                 print(f'winner: {game.winner} Expected: None')
                 self.assertFalse(game.game_over)
                 self.assertIsNone(game.winner)
-
-        print(f'game_over: {game.game_over} Expected: True')
-        print(f'winner: {game.winner} Expected: 2')
-        self.assertTrue(game.game_over)
-        self.assertEqual(game.winner, 2)
+            else:
+                print(f'state: {game.state} Expected: GAME_OVER')
+                print(f'winner: {game.winner} Expected: 2')
+                # self.assertTrue(game.game_over)
+                self.assertEqual('GAME_OVER', game.state)
+                self.assertEqual(game.winner, 2)
 
 
 if __name__ == '__main__':

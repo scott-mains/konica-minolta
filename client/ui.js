@@ -6733,7 +6733,7 @@ function diffHelp(a, b, patches, index)
 	var aType = a.type;
 	var bType = b.type;
 
-	// Bail if you run into different types of nodes. Implies that the
+	// Bail if you up into different types of nodes. Implies that the
 	// structure has changed significantly and it's not worth a diff.
 	if (aType !== bType)
 	{

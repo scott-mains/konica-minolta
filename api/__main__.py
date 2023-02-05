@@ -3,11 +3,11 @@ from typing import Union
 import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+
 from pydantic.dataclasses import dataclass
 
-from api.game import Game
-from api.models import Point, Line
+from .game import Game
+from .models import Point, Line
 
 app = FastAPI()
 

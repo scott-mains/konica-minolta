@@ -17,10 +17,10 @@ pip install -r requirements/requirements.txt
 ```
 
 ## Starting the API
-To run the API, use the convenience script:
+To run the API, use the convenience script from root:
 
 ```shell
-./scripts/run
+./scripts/up
 ```
 
 This starts the api server on the local host.
