@@ -40,6 +40,3 @@ Note: FastAPI serves on port 8000 by default, not port 8080
 To play the game:
 1. Start the API (see above).
 2. Open `client/index.html` in Chrome or Firefox.
-
-# Known Issues
-1. In some cases when a selected end node is on a diagonal, valid end nodes are ruled invalid, and vice versa. 
