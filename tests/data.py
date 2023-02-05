@@ -268,7 +268,6 @@ VALID_END_NODES = (
         Point(x=1, y=2),
         Point(x=1, y=3),
         # down right
-        Point(x=1, y=0),
         Point(x=2, y=1),
         Point(x=3, y=2),
         # right
@@ -282,12 +281,10 @@ VALID_END_NODES = (
         # right
         Point(x=1, y=2),
         Point(x=2, y=2),
-        Point(x=3, y=2),
         # up right
         Point(x=1, y=1),
-        Point(x=2, y=2),
         # down
-        Point(x=3, y=2),
+        Point(x=0, y=3),
         # down right
         Point(x=1, y=3),
     },

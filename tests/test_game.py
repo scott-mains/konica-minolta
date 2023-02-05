@@ -2,7 +2,8 @@ import unittest
 
 from api.game import Game
 from api.models import Line, Point, Path
-from tests.data import TURNS, VALID_END_NODES, VALID_START_NODES
+from api.errors import InvalidStartNode, InvalidEndNode
+from tests.data import TURNS, PATH_NODES, VALID_END_NODES, VALID_START_NODES
 from tests.utils import play_turn
 
 
@@ -30,37 +31,50 @@ class TestGame(unittest.TestCase):
                 game = Game()  # Initialize the game
                 for turn in TURNS[:i]:
                     play_turn(game, turn)  # play the game up until the turn in question
-                game(node)  # play the test node as the start node of the turn in question
+
+                  # play the test node as the start node of the turn in question
 
                 # evaluate
                 if node in valid_start_nodes:
-                    print(f'state: {game.state} expected: VALID_START_NODE')
+                    game.start_node = node
                     print(f'start_node: {game.start_node} expected: {node}')
                     self.assertEqual(node, game.start_node)  # the start node is set
-                    self.assertEqual(game.state, 'VALID_START_NODE')  # the state is correct
                 else:
-                    print(f'state: {game.state} expected: INVALID_START_NODE')
-                    print(f'start_node: {game.start_node} expected: None')
-                    self.assertIsNone(game.start_node)  # the node is not set
-                    self.assertEqual(game.state, 'INVALID_START_NODE')  # the state is correct
+                    with self.assertRaises(InvalidStartNode):
+                        try:
+                            game.start_node = node # the node is not set
+                        except InvalidStartNode as e:
+                            print(f'start_node: {node} expected: {e}')
+                            raise
 
     def test__set_end_node(self):
 
-        for node in Game().grid.nodes:  # test all the nodes
-            for i in range(len(TURNS)):  # through all the turns in the sample game  todo: use a fixture
+        for i in range(len(TURNS)):  # through all the turns in the sample game  todo: use a fixture
+            print(f'\nTurn {i + 1}:\n')  # test turn
+            start_node = TURNS[i][0]
+            print(f'start_node: {start_node}\n')
+            valid_end_nodes = VALID_END_NODES[i]
+            print(f'Valid end nodes: {valid_end_nodes}\n')
+
+            for node in Game().grid.nodes:  # test all the nodes
+                print(f'\nnode: {node}\n')
                 game = Game()  # Initialize the game
                 for turn in TURNS[:i]:
                     play_turn(game, turn)  # play the game until the turn in question
-                game(TURNS[i][0])  # set the start node of the present turn
-                game(node)  # receive the next end node
-
+                game(start_node)  # set the start node of the present turn
+                print(f'path: {str(game.path)}\n')
                 # assertions
-                if node in VALID_END_NODES[i]:  # known valid end nodes for the present turn
-                    self.assertEqual(node, game.start_node)  # the start node is set
-                    self.assertEqual(game.state, 'VALID_START_NODE')  # the state is correct
+                if node in valid_end_nodes:  # known valid end nodes for the present turn
+                    game.end_node = node  # receive the next end node
+                    print(f'end_node: {game.end_node} expected: {node}')
+                    self.assertEqual(node, game.end_node)  # the start node is set
                 else:
-                    self.assertIsNone(game.start_node)  # the node is not set
-                    self.assertEqual(game.state, 'INVALID_START_NODE')  # the state is correct
+                    with self.assertRaises(InvalidEndNode):
+                        try:
+                            game.end_node = node  # the node is invalid
+                        except InvalidEndNode as e:
+                            print(f'expected: {e}')
+                            raise
 
     def test__new_line(self):
 

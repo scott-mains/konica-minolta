@@ -162,15 +162,49 @@ class Path:
         2. Intersection by crossing occurs where segments starts at the same vertical and the start of the first and the
         end of the second are on the same horizontal and vice versa
         """
-        def crosses(a: Line, b: Line) -> bool:
-            if a and b:
-                return a.start.y == b.start.y and a.end.x == b.start.x and b.end.x == a.start.x \
-                    or a.start.x == b.start.x and a.end.y == b.end.y and b.end.y == a.start.y
-            else:
+        def _crosses(a: Line, b: Line) -> bool:
+
+            if not a and not b:
                 return False
 
-        return bool(set(self.nodes).intersection(set(other.nodes[1:]))) \
-            or any((crosses(a, b) for a in self.segments for b in other.segments))  # nodes[1:] ignores the start node
+            if not is_diagonal(a.direction) or not is_diagonal(b.direction):
+                return False
+
+            if abs(a.direction - b.direction) != 90:
+                return False
+
+            if a._start.y == b._start.y:
+
+                if not abs(a._start.x - b._start.x) == abs(a._end.x - b._end.x) == 1:
+                    return False
+
+                return a._end.x == b._start.x and b._end.x == a._start.x
+
+            if a._start.x == b._start.x:
+
+                if not abs(a._start.y - b._start.y) == abs(a._end.y - b._end.y) == 1:
+                    return False
+
+                return a._end.y == b._start.y and b._end.y == a._start.y
+
+        if not self:
+            return False
+
+        self_nodes = list(self.nodes)
+        other_nodes = list(other.nodes)
+
+        if other._start == self._end:
+            self_nodes.pop()
+
+        elif other._start == self._start:
+            other_nodes.reverse()  # in this case the other nodes will be reversed
+            other_nodes.pop()
+
+        intersects = bool(set(self_nodes).intersection(set(other_nodes)))
+
+        crosses = [_crosses(a, b) for a in self.segments for b in other.segments]
+
+        return intersects or any(crosses)
 
 
 @dataclass

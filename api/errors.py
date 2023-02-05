@@ -11,11 +11,23 @@ class PlayerError(Error):
 
 
 class InvalidStartNode(PlayerError):
-    pass
+
+    def __init__(self, start_node, valid_start_nodes):
+        self.start_node = start_node
+        self.valid_start_nodes = valid_start_nodes
+
+    def __str__(self):
+        return f'Start Node: {self.start_node} not in {self.valid_start_nodes}'
 
 
 class InvalidEndNode(PlayerError):
-    pass
+
+    def __init__(self, end_node, valid_end_nodes):
+        self.end_node = end_node
+        self.valid_end_nodes = valid_end_nodes
+
+    def __str__(self):
+        return f'End node: {self.end_node} not in {self.valid_end_nodes}'
 
 
 class InvalidLine(InternalError):

@@ -97,7 +97,7 @@ class Game:
             self._start_node = node
         else:
             self._start_node = None
-            raise InvalidStartNode
+            raise InvalidStartNode(node, choices)
 
     @property
     def end_node(self):
@@ -105,10 +105,12 @@ class Game:
 
     @end_node.setter
     def end_node(self, node: Point):
-        if node in self.valid_end_nodes(self.start_node) or node is None:
+        choices = self.valid_end_nodes(self.start_node)
+        if node in choices or node is None:
             self._end_node = node
         else:
-            raise InvalidEndNode
+            self._end_node = None
+            raise InvalidEndNode(node, choices)
 
     def valid_end_nodes(self, start_node: Point):
         """
@@ -119,10 +121,9 @@ class Game:
          b) the game_over property to determine if the game is over, i.e. neither the start nor the end of the path has
             any valid end nodes.
         """
-        # if not isinstance(start_node, Point):
-        #     raise TypeError(f'Start node is type: {type(start_node)}.  Expected a Point')
+
         nodes = set()
-        for node in self.grid.nodes:
+        for node in self.grid.nodes - set(self.path.nodes):
             try:
                 line = Line(start=start_node, end=node)
             except InvalidLine:
@@ -132,7 +133,7 @@ class Game:
                 nodes.add(node)
 
         return nodes
-    
+
     def try_again(self):
         self.new_line = self.end_node = self.start_node = None
 
